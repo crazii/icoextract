@@ -38,6 +38,9 @@ setup(
     extras_require={
         "thumbnailer": ["Pillow"]
     },
+    data_files=[
+        ('share/icons/icoextract', ['icons/msdos/application-x-ms-dos-executable.svg']),
+    ],
 
     # Executable scripts
     entry_points={
@@ -45,6 +48,7 @@ setup(
             'icoextract = icoextract.scripts.extract:main',
             'icolist = icoextract.scripts.icolist:main',
             'exe-thumbnailer = icoextract.scripts.thumbnailer:main [thumbnailer]',
+            'exe-shortcut = icoextract.scripts.gendesktop:main',
         ],
     },
 )
