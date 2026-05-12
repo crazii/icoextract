@@ -130,6 +130,35 @@ class IconExtractor():
             grp_icons.append((grp_icon, icon_data))
         return grp_icons
 
+    def _write_ico_list(self, fd, icons):
+        """
+        Writes raw data list[tuple[pefile.Structure, bytes]] to a file descriptor.
+        """
+        fd.write(b"\x00\x00") # 2 reserved bytes
+        fd.write(struct.pack("<H", 1)) # 0x1 (little endian) specifying that this is an .ICO image
+        fd.write(struct.pack("<H", len(icons)))  # number of images
+
+        dataoffset = 6 + (len(icons) * 16)
+        padding = 0 if dataoffset % 4 == 0 else 4 - dataoffset % 4 # add padding help with performance
+        dataoffset += padding
+        # First pass: write the icon dir entries
+        for datapair in icons:
+            group_icon, icon_data = datapair
+            # Elements in ICONDIRENTRY and GRPICONDIRENTRY are all the same
+            # except the last value, which is an ID in GRPICONDIRENTRY and
+            # the offset from the beginning of the file in ICONDIRENTRY.
+            fd.write(group_icon.__pack__()[:12])
+            fd.write(struct.pack("<I", dataoffset))
+            dataoffset += len(icon_data)  # Increase offset for next image
+
+        for i in range(padding):
+            fd.write(b'\x00')
+
+        # Second pass: write the icon data
+        for datapair in icons:
+            group_icon, icon_data = datapair
+            fd.write(icon_data)
+
     def _write_ico(self, fd, num=0, resource_id=None):
         """
         Writes ICO data to a file descriptor.
@@ -141,25 +170,7 @@ class IconExtractor():
                 raise IconNotFoundError(f"No icon exists with resource ID {resource_id}") from None
 
         icons = self._get_icon(index=num)
-        fd.write(b"\x00\x00") # 2 reserved bytes
-        fd.write(struct.pack("<H", 1)) # 0x1 (little endian) specifying that this is an .ICO image
-        fd.write(struct.pack("<H", len(icons)))  # number of images
-
-        dataoffset = 6 + (len(icons) * 16)
-        # First pass: write the icon dir entries
-        for datapair in icons:
-            group_icon, icon_data = datapair
-            # Elements in ICONDIRENTRY and GRPICONDIRENTRY are all the same
-            # except the last value, which is an ID in GRPICONDIRENTRY and
-            # the offset from the beginning of the file in ICONDIRENTRY.
-            fd.write(group_icon.__pack__()[:12])
-            fd.write(struct.pack("<I", dataoffset))
-            dataoffset += len(icon_data)  # Increase offset for next image
-
-        # Second pass: write the icon data
-        for datapair in icons:
-            group_icon, icon_data = datapair
-            fd.write(icon_data)
+        self._write_ico_list(self, fd, icons)
 
     def export_icon(self, filename, num=0, resource_id=None):
         """
@@ -178,6 +189,17 @@ class IconExtractor():
         """
         f = io.BytesIO()
         self._write_ico(f, num=num, resource_id=resource_id)
+        return f
+
+    def get_icon1(self, ico) -> io.BytesIO:
+        """
+        Exports single ICO data tuple as a `io.BytesIO` instance.
+
+        Icons can be selected by index (`num`) or resource ID. By default, the first icon in the binary is exported.
+        """
+        f = io.BytesIO()
+        icons = [ico]
+        self._write_ico_list(f, icons)
         return f
 
     @staticmethod
