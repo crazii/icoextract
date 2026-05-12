@@ -1,3 +1,8 @@
+This is a fork of icoextract (https://github.com/jlu5/icoextract) with following changes in a retro aspect:  
+- thumbnailer: add thumbnailer generation for .desktop shotcut which links to a PE/MZ
+- thumbnailer: workaround 4pp color icon problem for Pillow, for some old PE.
+- new script 'exe-shortcut' to generate .desktop for a MZ/PE with custom icon for MZ. it will search the folder of the MZ to find a icon, if not found, a standard "MS-DOS" icon is used.
+
 # icoextract
 
 [![Build Status](https://drone.overdrivenetworks.com/api/badges/jlu5/icoextract/status.svg)](https://drone.overdrivenetworks.com/jlu5/icoextract)
